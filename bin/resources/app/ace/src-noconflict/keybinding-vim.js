@@ -2930,6 +2930,9 @@ dom.importCssString(".normal-mode .ace_cursor{\
         var register = vimGlobalState.registerController.getRegister(
             actionArgs.registerName);
         var text = register.toString();
+          var endsnl = function(s){
+              return text.slice(-1)==='\n';
+          };
         if (!text) {
           return;
         }
@@ -2942,7 +2945,7 @@ dom.importCssString(".normal-mode .ace_cursor{\
           };
           var currentLine = cm.getLine(cm.getCursor().line);
           var indent = whitespaceLength(currentLine.match(/^\s*/)[0]);
-          var chompedText = text.replace(/\n$/, '');
+          var chompedText = text.replace(/\r$/, '');
           var wasChomped = text !== chompedText;
           var firstIndent = whitespaceLength(text.match(/^\s*/)[0]);
           var text = chompedText.replace(/^\s*/gm, function(wspace) {
@@ -2967,9 +2970,20 @@ dom.importCssString(".normal-mode .ace_cursor{\
         var blockwise = register.blockwise;
         if (linewise && !blockwise) {
           if(vim.visualMode) {
-            text = vim.visualLine ? text.slice(0, -1) : '\n' + text.slice(0, text.length - 1) + '\n';
+              if(vim.visualLine){
+                  while(endsnl(text)){
+                      text = text.slice(0,-1);
+                  }
+                  text = text.slice(0, -1);
+              }else{
+                  text = '\n' + text.slice(0, -1);
+              }
           } else if (actionArgs.after) {
-            text = '\n' + text.slice(0, text.length - 1);
+              while(endsnl(text)){
+                  text = text.slice(0,-1);
+              }
+              text = text.slice(0,-1);
+            text = '\n' + text;
             cur.ch = lineLength(cm, cur.line);
           } else {
             cur.ch = 0;
@@ -3041,8 +3055,8 @@ dom.importCssString(".normal-mode .ace_cursor{\
             cm.replaceRange(text, cur);
             if (linewise && actionArgs.after) {
               curPosFinal = Pos(
-              cur.line + 1,
-              findFirstNonWhiteSpaceCharacter(cm.getLine(cur.line + 1)));
+                cur.line + 1,
+                findFirstNonWhiteSpaceCharacter(cm.getLine(cur.line + 1)));
             } else if (linewise && !actionArgs.after) {
               curPosFinal = Pos(
                 cur.line,
